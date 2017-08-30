@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, minimum-scale=1, maximum-scale=1">
+<link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
+<script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+<link rel="stylesheet" href="css/gomi.css">
+<link rel="apple-touch-icon" href="image/gomi_icon.png"/>
+
+
+<title>ゴミチェッカー　地区選択</title>
+
+
+<!--□□□□□  javascript  □□□□□-->
+<script type="text/javascript">
+
+
+// □□□□□　ウィンドウロード時の設定　□□□□□
+$(window).load(function(){
+	myparseXml()
+});
+
+
+// □□□□□　xmlデータ取得　□□□□□
+function myparseXml(xml){
+	$.mobile.defaultPageTransition = 'none';
+	scrollTo(0,0);
+	$.ajax({
+		url: "xml/gomicalendar.xml",
+		type: "GET",
+		dataType: "xml",
+		error: function(){alert("動作検証中：\n動作確認済(推奨ブラウザ)：Safari,FireFox,IE8,Google Chrome");},
+		success: function(xml){parseXml(xml);}
+	});
+}
+
+
+// □□□□□　xmlデータ取得時におけるリストとコンテンツの設定　□□□□□
+function parseXml(xml){
+	$('#myList li').remove();
+	$('#myContents div').remove();
+	var myList = "";
+	var myContents = "";
+	var mygomi = $("gomisyusyubi", xml);
+	var i;
+	myList = myList + "<li data-theme='b'><a href='gomichecker.html' data-ajax='false'>選択しない</a></li>";
+	for (i = 0; i < mygomi.length; i++){
+		myList += "<li data-filtertext=" + $(mygomi[i]).find("keyword").text() + ">" +
+				"<a href='gomichecker.html?area=" + $(mygomi[i]).find("name").text() +
+					// calXは「gomicalendar.xlsx」のkubunXに対応。項目数は追加削除して調整。
+					"&cal1=" + $(mygomi[i]).find("kubun1").text() +
+					"&cal2=" + $(mygomi[i]).find("kubun2").text() +
+					"&cal3=" + $(mygomi[i]).find("kubun3").text() +
+					"&cal4=" + $(mygomi[i]).find("kubun4").text() +
+				"' target=_self>" + $(mygomi[i]).find("name").text() + "</a></li>";
+	}
+	$("#myList").append(myList).listview("refresh");
+	$("input[data-type='search']").val("");
+}
+
+</script>
+
+
+</head>
+
+
+<body>
+
+
+<!--□□□□□  ページ  □□□□□-->
+<div data-role="page" id="home">
+
+
+<!--□□□□□  ヘッダー  □□□□□-->
+	<div id="page-header" data-role="header" data-position="fixed" align="center" data-tap-toggle="false">
+		<image id="logo" src="image/4_1_gomichecker.png" width="200" alt="gomichecker" align="left">
+	</div>
+
+
+<!--□□□□□  コンテンツ  □□□□□-->
+	<div data-role="content" id="myfix">
+		<ul data-role="listview" id="myList" data-filter="true" data-filter-placeholder="検索...（ひらがな対応）" data-theme="a"></ul>
+	</div>
+
+
+<!--□□□□□  フッター  □□□□□-->
+	<div data-role='footer' data-position='fixed' align='center'>
+		<span style="font-weight: normal; font-size: smaller;">ゴミチェッカー　地区選択</span>
+	</div>
+</div>
+
+
+</body>
+</html>

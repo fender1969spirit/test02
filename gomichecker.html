@@ -1,0 +1,256 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, minimum-scale=1, maximum-scale=1">
+<link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
+<script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+<link rel="stylesheet" href="css/gomi.css">
+<link rel="apple-touch-icon" href="image/gomi_icon.png"/>
+
+<!--　①自治体名称を変更　-->
+<title>越前市ゴミチェッカー</title>
+
+
+<!--□□□□□  javascript  □□□□□-->
+<script type="text/javascript">
+
+// □□□□□　コンテンツ内のリスト表示を設定　□□□□□
+$(document).on("pagecontainershow", function(e, d){
+	var hashStr = $.mobile.path.parseUrl(e.currentTarget.URL).hash;
+	if (hashStr){
+		var listObj = d.toPage.find("[name=calendar]");
+		var listObj2 = d.toPage.find("[name=question]");
+		var listObj3 = d.toPage.find("[name=message]");
+		if (calParam){
+			listObj.children("li").remove();
+			listObj2.children("li").remove();
+			listObj3.children("li").remove();
+			// **********　②分別とその曜日を掲載（calXは「gomicalendar.xlsx」のkubunXに対応。項目数は追加削除して調整。）　*****
+			listObj.append("<li data-role='list-divider'>燃やせるごみ</li>");
+			listObj.append("<li id=cont>" + calParam.cal1 + "曜日</li>");
+			listObj.append("<li data-role='list-divider'>プラ容器ごみ</li>");
+			listObj.append("<li id=cont>毎週" + calParam.cal2 + "曜日</li>");
+			listObj.append("<li data-role='list-divider'>燃やせないごみ（月２回）</li>");
+			listObj.append("<li id=cont>" + calParam.cal3 + "曜日</li>");
+			listObj.append("<li data-role='list-divider'>資源ごみ（月２回）<br>" +
+						"<font size='1'>資源ごみ:かん,びん,ﾍﾟｯﾄﾎﾞﾄﾙ,有害,ｽﾌﾟﾚｰかん等</font></li>");
+			listObj.append("<li id=cont>" + calParam.cal4 + "曜日</li>");
+			// **********　③年末年始のみ掲載（表示しない時期は次の2行の先頭に//をそれぞれ追加。）　*****
+			listObj.append("<li data-role='list-divider'>年末年始の収集</li>");
+			listObj.append("<li id=cont><p>次の期間は収集を行いません<br>平成27年12月XX日～平成28年1月XX日</p></li>");
+			// **********　④問い合わせ関係を掲載　*****
+			listObj2.append("<li data-role='list-divider'>ゴミ分別の問い合わせ先<br>" +
+						"<b><font size='1'>越前市環境政策課" +
+						"&nbsp;<a href='tel:0778-22-5342'>0778-22-5342</a></font></b></li>");
+			listObj2.append("<li data-role='list-divider'>粗大ごみの直接搬入<br>" +
+						"<b><font size='1'>南越清掃組合第２清掃センター" +
+						"&nbsp;<a href='tel:0778-28-1370'>0778-28-1370</a></font></b></li>");
+			// **********　⑤メッセージを掲載　*****
+			listObj3.append("<li data-role='list-divider'>資源を次の世代に。。。</li>");
+		}else{
+			listObj.children("li").remove();
+			listObj2.children("li").remove();
+			listObj3.children("li").remove();
+			listObj.append("<li><a href='gomicalendar.html' data-ajax='false'>地区を選択</a></li>");
+		};
+		listObj.listview("refresh");
+		listObj2.listview("refresh");
+		listObj3.listview("refresh");
+	};
+});
+
+
+// □□□□□　ウィンドウロード時の設定　□□□□□
+var calParam;
+$(window).load(function(){
+	calParam = getCalParam();
+	var areaStr = (calParam)? calParam.area: "地区を選択";
+	$("#myAreaButton").text(areaStr);
+	myparseXml();
+	$("#totop").on("vclick", function(e){
+		$("body").animate({scrollTop: 0}, {duration: 100});
+		return false;
+	});
+	
+});
+
+
+// □□□□□　gomicalendar.html?以降の値を配列として取得（calX=曜日等）　□□□□□
+function getCalParam(){
+	var urlParam = $.mobile.path.getDocumentUrl($.mobile.path.getDocumentUrl).search.substr(1);
+	var paramObj = new Object();
+	if (urlParam){
+		var paramArray = urlParam.split("&");
+		$.each(paramArray, function(key, val){
+			var paramStr = val.split("=");
+			var paramName = paramStr[0];
+			var paramValue = paramStr[1];
+			paramObj[paramName] = decodeURI(paramValue);
+		});
+		return paramObj;
+	};
+	return null;
+}
+
+
+// □□□□□　xmlデータ取得　□□□□□
+function myparseXml(xml){
+	$.mobile.defaultPageTransition = 'none';
+	scrollTo(0,0);
+	$.ajax({
+		url: "xml/gomi.xml",
+		type: "GET",
+		dataType: "xml",
+		error: function(){alert("動作検証中：\n動作確認済(推奨ブラウザ)：Safari,FireFox,IE8,Google Chrome");},
+		success: function(xml){parseXml(xml);}
+	});
+}
+
+
+// □□□□□　xmlデータ取得時におけるリストとコンテンツの設定　□□□□□
+function parseXml(xml){
+	$('#myList li').remove();
+	$('#myContents div').remove();
+	var myList = "";
+	var myContents = "";
+	var mygomi = $("gomi", xml);
+	var i;
+	myList = myList + "<li data-theme='b'><a href='#no0'>収集日をチェックする</a></li>";
+	myContents = myContents + "<div data-role='page' id='no0' data-url='no0'>" +
+					"<div data-role='header' data-position='fixed' align='center' + data-add-back-btn='true'>" +
+						"<image src='image/4_1_gomichecker.png' width='200' alt='gomichecker'>" +
+					"</div>" +
+					"<div data-role='content'>" +
+						"<h4>収集日</h4>" +
+						"<ul name='calendar' data-role='listview' data-inset='true'></ul>" +
+						"<ul name='question' data-role='listview' data-inset='true'></ul>" +
+						"<ul name='message' data-role='listview' data-inset='true'></ul>" +
+					"</div>" +
+				"</div>";
+	for (i = 1; i < mygomi.length + 1; i++){
+		myList += "<li data-filtertext=" + $(mygomi[i]).find("keyword").text() + $(mygomi[i]).find("kubun").text() + ">" +
+			"<a href='#no" + i + "'>" + $(mygomi[i]).find("name").text() + "<br>" +
+				"<span style='padding-left: 10px; font-size: smaller; color: gray; font-weight: normal;'>" +
+					"<b>" + $(mygomi[i]).find("kubun").text() + "</b>&emsp;" + $(mygomi[i]).find("zyouken").text() +
+				"</span>" +
+			"</a></li>";
+		myContents += "<div data-role='page' id='no" + i + "' data-url='no" + i + "'>" +
+					"<div data-role='header' data-position='fixed' align='center' + data-add-back-btn='true'>" +
+						"<image src='image/4_1_gomichecker.png' width='200' alt='gomichecker'>" +
+					"</div>" +
+					"<div data-role='content'>" +
+						"<h3>" +$(mygomi[i]).find("name").text() + "</h3>" +
+						"<h3>分別：" + $(mygomi[i]).find("kubun").text() + "</h3>" +
+						"<p>" + $(mygomi[i]).find("zyouken").text() + "</p>" +
+						"<h4>収集日</h4>" +
+						"<ul name='calendar' data-role='listview' data-inset='true'></ul>" +
+						"<ul name='question' data-role='listview' data-inset='true'></ul>" +
+						"<ul name='message' data-role='listview' data-inset='true'></ul>" +
+					"</div>" +
+				"</div>";
+	}
+	$("#myList").append(myList).listview("refresh");
+	$("#home").after(myContents).page();
+	$("input[data-type='search']").val("");
+}
+
+
+// □□□□□　TOPへ戻るボタンの設定　□□□□□
+$(document).on("scrollstop", function(e, d){
+	if($("body").scrollTop() > 400){
+		$("#totop").fadeIn(200);
+	}else{
+		$("#totop").fadeOut(200);
+	};
+});
+
+
+// □□□□□　日付の設定　□□□□□
+var weeks = new Array('日','月','火','水','木','金','土');
+var now = new Date();
+var year = now.getYear();
+var month = now.getMonth() + 1;
+var day = now.getDate();
+var week = weeks[ now.getDay() ];
+if(year < 2000) { year += 1900; }
+if(month < 10) { month = "0" + month; }
+if(day < 10) { day = "0" + day; }
+
+
+</script>
+
+
+<!--□□□□□  CSS  □□□□□-->
+<style type="text/css">
+
+/*　吹き出し中の自治体名称の位置（⑦と連動）　*/
+p#commune span {
+	/*　⑥以下を次の数値に変更する。自治体名称の文字数:2字＝113px, 3字＝105px, 4字＝99px, 5字＝91px, 6字＝85px, 7字＝77px　*/
+	left: 105px;
+}
+
+</style>
+
+
+<!--□□□□□　●google analytics　□□□□□-->
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-46225675-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+	ga.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'stats.g.doubleclick.net/dc.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+
+
+</head>
+
+
+<body>
+
+
+<!--□□□□□  ページ  □□□□□-->
+<div data-role="page" id="home">
+
+
+<!--□□□□□  ヘッダー  □□□□□-->
+	<div id="page-header" data-role="header" data-position="fixed" align="center" data-tap-toggle="false">
+		<image id="logo" src="image/1_2_gomichecker.png" width="200" alt="gomichecker" align="left">
+		<!--□□□□□  ⑦吹き出し中の自治体名称を設定（⑥と連動）  □□□□□-->
+		<p id="commune"><span>越前市</span></p>
+		<a id="myAreaButton" data-ajax="false" href="gomicalendar.html" class="ui-btn-inline ui-btn-right ui-shadow"></a>
+	</div>
+
+
+<!--□□□□□  コンテンツ  □□□□□-->
+	<div data-role="content" style="padding-top: 0;">
+		<div id="myfix">
+			<ul data-role="listview" id="myList" data-filter="true" data-filter-placeholder="検索...（ひらがな対応）" data-theme="a"></ul>
+		</div>
+		<a id="totop" href="" class="ui-btn ui-btn-b ui-corner-all ui-shadow ui-icon-arrow-u ui-btn-icon-notext"></a>
+	</div>
+
+
+<!--□□□□□  フッター  □□□□□-->
+	<div data-role="footer" data-position="fixed" data-tap-toggle="false" align="center">
+		<!--□□□□□　●次の3行はIE8に未対応。　□□□□□-->
+		<!--	<script type="text/javascript">	-->
+		<!--	document.write('<p id="today">今日の日付 <strong>' + year + '/' + month + '/' + day + '（' + week + '）</p>');	-->
+		<!--	</script>	-->
+		<!--□□□□□  ⑧フッターの問い合わせ先やクレジットなど  □□□□□-->
+		<p id="tel">ゴミ分別のお問い合わせは越前市環境政策課まで　Tel:<a href="tel:0778-22-5342">0778-22-5342</a></p>
+		<p id="copyright">&copy;越前市ぷらぷらぼ&nbsp;<span>[更新&nbsp;2015/02/07]<br>
+		<a href="http://www4.ttn.ne.jp/~flowerhana/gomiindex.html" data-ajax="false">オリジナルゴミチェッカーはコチラ</a></span></p>
+	</div>
+</div>
+
+
+</body>
+</html>
